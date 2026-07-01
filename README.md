@@ -125,6 +125,19 @@ Claw Code is built in the open alongside the broader UltraWorkers toolchain:
 - [oh-my-codex](https://github.com/Yeachan-Heo/oh-my-codex)
 - [UltraWorkers Discord](https://discord.gg/5TUQKqFWd)
 
+## Prism/Comb 0-loss (2026-07-01) — Asolaria estate satellite
+
+Campaign `acer/prism-comb-0loss-2026-07-01` (E=0, docs-only cross-link). The law: every prism/comb
+operation is a bijection — entropy is invariant (`H(f(X)) = H(X)`), so information is re-related with
+0 loss and nothing claims compression below the Shannon bound. This repo's parity discipline is the
+same theorem's **integrity dual**: a port is correct only when verification-by-recomputation runs the
+round trip — [`PARITY.md`](./PARITY.md) and the [mock parity harness](./rust/MOCK_PARITY_HARNESS.md)
+are that inverse map, which is why a lossy (divergent) step cannot hide in a parity chain.
+Scope: the 256↔1024 level transcode is **MEASURED** (Q-PRISM `53023b6` — sha256-identical round-trip,
+Rust==Python symbol-identical); the 43+ level ladder is **CANON** frame; every further rung stays
+**UNVERIFIED** until its own round-trip proof runs. Satellites: Q-PRISM (`53023b6`/`79e8d63`/`de00aca`) ·
+waves-cascades (duality) · what-is-asolaria (reductions) · N-Nest (integrity dual) · Metatagging (physics).
+
 ## Ownership / affiliation disclaimer
 
 - This repository does **not** claim ownership of the original Claude Code source material.
