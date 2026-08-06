@@ -1,3 +1,9 @@
+//! FLOAT-WIRE-BOUNDARY-EXEMPT: the f64 fields below are JSON wire types required by an
+//! EXTERNAL API contract (OpenAI/Anthropic-compatible request and response bodies). They are
+//! serde boundary fields, not system arithmetic — no computation is performed on them here.
+//! The operator rule (Rust 1.81, integer/ternary only, never float) governs system math;
+//! changing these types would break protocol compatibility with the remote service.
+//! Fields here: untagged JSON ConfigValue::Number and durationSeconds output field.
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::process::Command;
