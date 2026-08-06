@@ -1,4 +1,5 @@
 [package]
+rust-version = "1.81"
 name = "rusty-claude-cli"
 version.workspace = true
 edition.workspace = true
