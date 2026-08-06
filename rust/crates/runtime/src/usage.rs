@@ -1,27 +1,30 @@
 use crate::session::Session;
 
-const DEFAULT_INPUT_COST_PER_MILLION: f64 = 15.0;
-const DEFAULT_OUTPUT_COST_PER_MILLION: f64 = 75.0;
-const DEFAULT_CACHE_CREATION_COST_PER_MILLION: f64 = 18.75;
-const DEFAULT_CACHE_READ_COST_PER_MILLION: f64 = 1.5;
+// Money is INTEGER (operator rule: no float). Unit: NANO-USD (1e-9 USD) per million tokens.
+// $15.00 -> 15_000_000_000 nano-USD. Exact at every arithmetic step; no rounding drift.
+const DEFAULT_INPUT_COST_PER_MILLION_NANOUSD: u64 = 15_000_000_000;
+const DEFAULT_OUTPUT_COST_PER_MILLION_NANOUSD: u64 = 75_000_000_000;
+const DEFAULT_CACHE_CREATION_COST_PER_MILLION_NANOUSD: u64 = 18_750_000_000;
+const DEFAULT_CACHE_READ_COST_PER_MILLION_NANOUSD: u64 = 1_500_000_000;
 
 /// Per-million-token pricing used for cost estimation.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ModelPricing {
-    pub input_cost_per_million: f64,
-    pub output_cost_per_million: f64,
-    pub cache_creation_cost_per_million: f64,
-    pub cache_read_cost_per_million: f64,
+    /// All fields are NANO-USD (1e-9 USD) per million tokens; integer only.
+    pub input_cost_per_million_nanousd: u64,
+    pub output_cost_per_million_nanousd: u64,
+    pub cache_creation_cost_per_million_nanousd: u64,
+    pub cache_read_cost_per_million_nanousd: u64,
 }
 
 impl ModelPricing {
     #[must_use]
     pub const fn default_sonnet_tier() -> Self {
         Self {
-            input_cost_per_million: DEFAULT_INPUT_COST_PER_MILLION,
-            output_cost_per_million: DEFAULT_OUTPUT_COST_PER_MILLION,
-            cache_creation_cost_per_million: DEFAULT_CACHE_CREATION_COST_PER_MILLION,
-            cache_read_cost_per_million: DEFAULT_CACHE_READ_COST_PER_MILLION,
+            input_cost_per_million_nanousd: DEFAULT_INPUT_COST_PER_MILLION_NANOUSD,
+            output_cost_per_million_nanousd: DEFAULT_OUTPUT_COST_PER_MILLION_NANOUSD,
+            cache_creation_cost_per_million_nanousd: DEFAULT_CACHE_CREATION_COST_PER_MILLION_NANOUSD,
+            cache_read_cost_per_million_nanousd: DEFAULT_CACHE_READ_COST_PER_MILLION_NANOUSD,
         }
     }
 }
@@ -36,21 +39,22 @@ pub struct TokenUsage {
 }
 
 /// Estimated dollar cost derived from a [`TokenUsage`] sample.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct UsageCostEstimate {
-    pub input_cost_usd: f64,
-    pub output_cost_usd: f64,
-    pub cache_creation_cost_usd: f64,
-    pub cache_read_cost_usd: f64,
+    /// All fields are NANO-USD (1e-9 USD); integer only.
+    pub input_cost_nanousd: u64,
+    pub output_cost_nanousd: u64,
+    pub cache_creation_cost_nanousd: u64,
+    pub cache_read_cost_nanousd: u64,
 }
 
 impl UsageCostEstimate {
     #[must_use]
-    pub fn total_cost_usd(self) -> f64 {
-        self.input_cost_usd
-            + self.output_cost_usd
-            + self.cache_creation_cost_usd
-            + self.cache_read_cost_usd
+    pub const fn total_cost_nanousd(self) -> u64 {
+        self.input_cost_nanousd
+            + self.output_cost_nanousd
+            + self.cache_creation_cost_nanousd
+            + self.cache_read_cost_nanousd
     }
 }
 
@@ -60,18 +64,18 @@ pub fn pricing_for_model(model: &str) -> Option<ModelPricing> {
     let normalized = model.to_ascii_lowercase();
     if normalized.contains("haiku") {
         return Some(ModelPricing {
-            input_cost_per_million: 1.0,
-            output_cost_per_million: 5.0,
-            cache_creation_cost_per_million: 1.25,
-            cache_read_cost_per_million: 0.1,
+            input_cost_per_million_nanousd: 1_000_000_000,
+            output_cost_per_million_nanousd: 5_000_000_000,
+            cache_creation_cost_per_million_nanousd: 1_250_000_000,
+            cache_read_cost_per_million_nanousd: 100_000_000,
         });
     }
     if normalized.contains("opus") {
         return Some(ModelPricing {
-            input_cost_per_million: 15.0,
-            output_cost_per_million: 75.0,
-            cache_creation_cost_per_million: 18.75,
-            cache_read_cost_per_million: 1.5,
+            input_cost_per_million_nanousd: 15_000_000_000,
+            output_cost_per_million_nanousd: 75_000_000_000,
+            cache_creation_cost_per_million_nanousd: 18_750_000_000,
+            cache_read_cost_per_million_nanousd: 1_500_000_000,
         });
     }
     if normalized.contains("sonnet") {
@@ -97,15 +101,15 @@ impl TokenUsage {
     #[must_use]
     pub fn estimate_cost_usd_with_pricing(self, pricing: ModelPricing) -> UsageCostEstimate {
         UsageCostEstimate {
-            input_cost_usd: cost_for_tokens(self.input_tokens, pricing.input_cost_per_million),
-            output_cost_usd: cost_for_tokens(self.output_tokens, pricing.output_cost_per_million),
-            cache_creation_cost_usd: cost_for_tokens(
+            input_cost_nanousd: cost_for_tokens(self.input_tokens, pricing.input_cost_per_million_nanousd),
+            output_cost_nanousd: cost_for_tokens(self.output_tokens, pricing.output_cost_per_million_nanousd),
+            cache_creation_cost_nanousd: cost_for_tokens(
                 self.cache_creation_input_tokens,
-                pricing.cache_creation_cost_per_million,
+                pricing.cache_creation_cost_per_million_nanousd,
             ),
-            cache_read_cost_usd: cost_for_tokens(
+            cache_read_cost_nanousd: cost_for_tokens(
                 self.cache_read_input_tokens,
-                pricing.cache_read_cost_per_million,
+                pricing.cache_read_cost_per_million_nanousd,
             ),
         }
     }
@@ -139,29 +143,33 @@ impl TokenUsage {
                 self.output_tokens,
                 self.cache_creation_input_tokens,
                 self.cache_read_input_tokens,
-                format_usd(cost.total_cost_usd()),
+                format_usd(cost.total_cost_nanousd()),
                 model_suffix,
                 pricing_suffix,
             ),
             format!(
                 "  cost breakdown: input={} output={} cache_write={} cache_read={}",
-                format_usd(cost.input_cost_usd),
-                format_usd(cost.output_cost_usd),
-                format_usd(cost.cache_creation_cost_usd),
-                format_usd(cost.cache_read_cost_usd),
+                format_usd(cost.input_cost_nanousd),
+                format_usd(cost.output_cost_nanousd),
+                format_usd(cost.cache_creation_cost_nanousd),
+                format_usd(cost.cache_read_cost_nanousd),
             ),
         ]
     }
 }
 
-fn cost_for_tokens(tokens: u32, usd_per_million_tokens: f64) -> f64 {
-    f64::from(tokens) / 1_000_000.0 * usd_per_million_tokens
+/// Exact integer cost: tokens x nano-USD-per-million / 1_000_000, truncated to nano-USD.
+/// u128 intermediate cannot overflow for any u32 token count.
+fn cost_for_tokens(tokens: u32, nanousd_per_million_tokens: u64) -> u64 {
+    ((tokens as u128 * nanousd_per_million_tokens as u128) / 1_000_000) as u64
 }
 
 #[must_use]
 /// Formats a dollar-denominated value for CLI display.
-pub fn format_usd(amount: f64) -> String {
-    format!("${amount:.4}")
+pub fn format_usd(nanousd: u64) -> String {
+    // four decimal places, integer division only — same output shape as before ($0.1234)
+    let ten_thousandths = nanousd / 100_000; // 1e-4 USD units
+    format!("${}.{:04}", ten_thousandths / 10_000, ten_thousandths % 10_000)
 }
 
 /// Aggregates token usage across a running session.
@@ -253,8 +261,8 @@ mod tests {
         };
 
         let cost = usage.estimate_cost_usd();
-        assert_eq!(format_usd(cost.input_cost_usd), "$15.0000");
-        assert_eq!(format_usd(cost.output_cost_usd), "$37.5000");
+        assert_eq!(format_usd(cost.input_cost_nanousd), "$15.0000");
+        assert_eq!(format_usd(cost.output_cost_nanousd), "$37.5000");
         let lines = usage.summary_lines_for_model("usage", Some("claude-sonnet-4-20250514"));
         assert!(lines[0].contains("estimated_cost=$54.6750"));
         assert!(lines[0].contains("model=claude-sonnet-4-20250514"));
@@ -274,8 +282,8 @@ mod tests {
         let opus = pricing_for_model("claude-opus-4-6").expect("opus pricing");
         let haiku_cost = usage.estimate_cost_usd_with_pricing(haiku);
         let opus_cost = usage.estimate_cost_usd_with_pricing(opus);
-        assert_eq!(format_usd(haiku_cost.total_cost_usd()), "$3.5000");
-        assert_eq!(format_usd(opus_cost.total_cost_usd()), "$52.5000");
+        assert_eq!(format_usd(haiku_cost.total_cost_nanousd()), "$3.5000");
+        assert_eq!(format_usd(opus_cost.total_cost_nanousd()), "$52.5000");
     }
 
     #[test]
