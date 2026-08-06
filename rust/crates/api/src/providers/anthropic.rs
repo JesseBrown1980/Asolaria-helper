@@ -328,7 +328,7 @@ impl AnthropicClient {
                             response
                                 .usage
                                 .estimated_cost_usd(&response.model)
-                                .total_cost_usd(),
+                                .total_cost_nanousd(),
                         )),
                     ),
             );
