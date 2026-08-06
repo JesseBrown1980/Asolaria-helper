@@ -1,3 +1,9 @@
+//! FLOAT-WIRE-BOUNDARY-EXEMPT: the f64 fields below are JSON wire types required by an
+//! EXTERNAL API contract (OpenAI/Anthropic-compatible request and response bodies). They are
+//! serde boundary fields, not system arithmetic — no computation is performed on them here.
+//! The operator rule (Rust 1.81, integer/ternary only, never float) governs system math;
+//! changing these types would break protocol compatibility with the remote service.
+//! Fields here: temperature / top_p / frequency_penalty / presence_penalty.
 use runtime::{pricing_for_model, TokenUsage, UsageCostEstimate};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -304,7 +310,7 @@ mod tests {
         };
 
         let cost = response.usage.estimated_cost_usd(&response.model);
-        assert_eq!(format_usd(cost.total_cost_usd()), "$54.6750");
+        assert_eq!(format_usd(cost.total_cost_nanousd()), "$54.6750");
         assert_eq!(response.total_tokens(), 1_800_000);
     }
 }
