@@ -3838,7 +3838,7 @@ impl LiveCli {
                     summary.usage.estimate_cost_usd_with_pricing(
                         pricing_for_model(&self.model)
                             .unwrap_or_else(runtime::ModelPricing::default_sonnet_tier)
-                    ).total_cost_usd()
+                    ).total_cost_nanousd()
                 )
             })
         );
